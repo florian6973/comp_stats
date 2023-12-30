@@ -30,26 +30,41 @@ class VAE(L.LightningModule):
         else:
             raise ValueError("Unknown posterior")
         # self.batch_size = config["dataset"]["batch_size"]
-                
+
+        self.activation = self.config["model"]["activation"]
+
+        def get_activation():
+            if self.activation == "relu":
+                return nn.ReLU()
+            elif self.activation == "tanh":
+                return nn.Tanh()
+            else:
+                raise ValueError("Unknown activation")
+        
         self.encoder = nn.Sequential(
             nn.Linear(self.i, self.h),
-            nn.ReLU(),
-            nn.Linear(self.h, self.h),
-            nn.ReLU(),
-            nn.Linear(self.h, self.latent_factor*self.d),
+            get_activation()
         )
         self.decoder = nn.Sequential(
             nn.Linear(self.d, self.h),
-            nn.ReLU(),
-            nn.Linear(self.h, self.h),
-            nn.ReLU(),
-            nn.Linear(self.h, self.m*self.i),
+            get_activation()
         )
+        for _ in range(self.config["model"]["n_layers"] - 1):
+            self.encoder = self.encoder.extend(nn.Sequential(
+                nn.Linear(self.h, self.h),
+                get_activation(),
+            ))
+            self.decoder = self.decoder.extend(nn.Sequential(
+                nn.Linear(self.h, self.h),
+                get_activation(),
+            ))
+        self.encoder = self.encoder.extend(nn.Sequential(nn.Linear(self.h, self.latent_factor*self.d)))
+        self.decoder = self.decoder.extend(nn.Sequential(nn.Linear(self.h, self.m*self.i)))
 
         for layer in self.encoder + self.decoder:
             if isinstance(layer, nn.Linear):
-                init.xavier_uniform_(layer.weight, gain=init.calculate_gain('tanh'))
-                init.zeros_(layer.bias)
+                layer.weight = init.xavier_uniform_(layer.weight, gain=init.calculate_gain(self.activation)) # tanh before
+                layer.bias = init.zeros_(layer.bias)
 
 
         # self.encoder = encoder
@@ -79,14 +94,22 @@ class VAE(L.LightningModule):
             # print("u_z.shape", u_z.shape)
             # print("u_z @ u_z.T.shape", (u_z @ u_z.transpose(1,2)).shape)
             # print("torch.diag_embed(torch.exp(diag_z)).shape", torch.diag_embed(torch.exp(diag_z)).shape)
-            sigma_z = torch.diag_embed(torch.exp(0.1 * diag_z)) + u_z @ u_z.transpose(1,2)
+            # sigma_z = torch.exp(torch.diag_embed(diag_z)) + u_z @ u_z.transpose(1,2)
+            d_z = torch.diag_embed(1/torch.exp(diag_z))
+            ut_z = u_z.transpose(1,2)
+            eta = 1/(ut_z @ d_z @ u_z+1)
+            sigma_z = d_z - d_z @ u_z @ eta @ ut_z @ d_z
         elif self.latent_factor == 2:
             mu_z, diag_z = torch.split(latent_parameters, self.d, dim=1)
             sigma_z = torch.diag_embed(torch.exp(0.1 * diag_z))
         # print("sigma_z.shape", sigma_z.shape)
+            
+        # print(mu_z, sigma_z)
 
         q = td.MultivariateNormal(mu_z, sigma_z)
         z = q.rsample()
+
+        # print(z)s
         # print("z.shape", z.shape)
 
         batch_size = batch.shape[0]
@@ -105,9 +128,12 @@ class VAE(L.LightningModule):
         else:
             # print("decoded_x.shape", decoded_x.shape)
             mu_x, diag_x = torch.split(decoded_x, self.i, dim=1)
+
+            # print(mu_x)
+
             # print("mu_x.shape", mu_x.shape)
             
-            x_given_z = td.MultivariateNormal(mu_x, torch.diag_embed(torch.exp(0.1 * diag_x) + self.ksi))
+            x_given_z = td.MultivariateNormal(mu_x, torch.diag_embed(torch.exp(diag_x) + self.ksi))
             reconstruction_log_prob = x_given_z.log_prob(batch)     
         # print("Device of z", z.get_device())   
         prior_log_prob = prior.log_prob(z)
@@ -122,7 +148,7 @@ class VAE(L.LightningModule):
         # print("reconstruction_log_prob", reconstruction_log_prob.mean())
         # exit()
 
-        print(-torch.mean(reconstruction_log_prob + prior_log_prob - denominator_log_prob))
+        # print(-torch.mean(reconstruction_log_prob + prior_log_prob - denominator_log_prob))
         # exit()
 
         return torch.mean(reconstruction_log_prob + prior_log_prob - denominator_log_prob)
@@ -161,6 +187,7 @@ class VAE(L.LightningModule):
         # for loss in self.current_train_loss_values:
         #     self.train_losses.append(loss.item())
         # print(torch.tensor(self.current_train_loss_values))
+        print("")
         print(np.mean(torch.tensor(self.current_train_loss_values)[:-1].cpu().numpy()))
         print(np.mean(torch.tensor(self.current_val_loss_values)[:-1].cpu().numpy()))
         self.train_losses.append(torch.mean(torch.tensor(self.current_train_loss_values)).item())

@@ -5,12 +5,17 @@ import cs.dataset as D
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import torch.distributions as td
 
+repertory = r"outputs\elbo_unconstrained_2023-12-30\22-54-52"
+file = r"\lightning_logs\version_0\checkpoints\epoch=199-step=35400.ckpt"
 # read cpkt
-config = yaml.load(open("cs/config/default.yaml", "r"), Loader=yaml.FullLoader)
-model = M.VAE.load_from_checkpoint("test.ckpt", config=config)
+config = yaml.load(open(repertory + r"\.hydra\config.yaml", "r"), Loader=yaml.FullLoader)
+train_loader, test_loader, dim_input = D.load_dataset(config)
+model = M.VAE.load_from_checkpoint(repertory + file, config=config, dim_input=dim_input)
+
+# model = M.VAE.load_from_checkpoint(r"outputs\elbo_unconstrained_2023-12-30\21-58-02-good\lightning_logs\version_0\checkpoints\epoch=199-step=5400.ckpt", config=config, dim_input=dim_input)
 print(model.config)
-train_loader, test_loader = D.load_dataset(config)
 
 # test
 device = "cpu"
@@ -20,19 +25,35 @@ device = "cpu"
 model.eval()
 
 with torch.no_grad():
-    np.random.seed(config["model"]["seed"])
     samples = []
-    for i in range(5):
-        z = torch.Tensor(np.random.normal(0, 1, (1, 5))).to(device)
+    while True:
+        z = torch.Tensor(np.random.normal(0, 1, (1, model.config["model"]["d"]))).to(device) #torch.Tensor(np.random.normal(0, 1, (1, 5))).to(device)
+        print(z)
         sample_params = model.to(device).decoder(z)
-        mu_x, diag_x = torch.split(sample_params, 560, dim=1)
-        # x_given_z = td.MultivariateNormal(mu_x, torch.diag_embed(torch.exp(diag_x)))
-        # just take mu?
-        # sample = x_given_z.sample()
-        sample = mu_x
-        sample = sample.reshape(28, 20).cpu().numpy()
-        samples.append(sample)
-    sample = np.concatenate(samples, axis=1)
-    plt.imshow(sample, cmap='gray')
-    plt.axis('off')
-    plt.show()
+
+        if model.config["loss"]["output"] == "bernouilli":
+            p_x = sample_params
+
+            plt.imshow((p_x.reshape(28, 28).cpu().numpy()), cmap='gray')
+            plt.axis('off')
+            # plt.savefig(f"sample-prob-{annotation}.png")
+            plt.show()
+
+            x_given_z = td.Bernoulli(logits=p_x)
+            sample = x_given_z.sample().reshape(28, 28).cpu().numpy()
+            samples = [sample]
+        else:
+            mu_x, diag_x = torch.split(sample_params, 560, dim=1)
+            x_given_z = td.MultivariateNormal(mu_x, torch.diag_embed(torch.exp(diag_x)))
+            # just take mu?
+            sample = x_given_z.sample()
+            # sample = mu_x
+            sample = sample.reshape(28, 20).cpu().numpy()
+            samples.append(sample)
+        
+        for i, sample in enumerate(samples):
+            plt.subplot(1, len(samples), i+1)           
+
+            plt.imshow(sample, cmap='gray')
+        plt.axis('off')
+        plt.show()
