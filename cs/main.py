@@ -11,6 +11,35 @@ import numpy as np
 from cs.dataset import load_dataset
 from cs.model import get_model
 
+def sample(model, device, annotation):
+    with torch.no_grad():
+        z = torch.Tensor(np.random.normal(0, 1, (1, model.config["model"]["d"]))).to(device) #torch.Tensor(np.random.normal(0, 1, (1, 5))).to(device)
+        print(z)
+        sample_params = model.to(device).decoder(z)
+
+        if model.config["loss"]["output"] == "bernouilli":
+            p_x = sample_params
+
+            plt.imshow(np.exp(p_x.reshape(28, 28).cpu().numpy()), cmap='gray')
+            plt.axis('off')
+            plt.savefig(f"sample-prob-{annotation}.png")
+            plt.show()
+
+            x_given_z = td.Bernoulli(logits=p_x)
+            sample = x_given_z.sample().reshape(28, 28).cpu().numpy()
+        else:
+            mu_x, diag_x = torch.split(sample_params, 560, dim=1)
+            # x_given_z = td.MultivariateNormal(mu_x, torch.diag_embed(torch.exp(diag_x)))
+            # just take mu?
+            # sample = x_given_z.sample()
+            sample = mu_x
+            sample = sample.reshape(28, 20).cpu().numpy()
+
+        plt.imshow(sample, cmap='gray')
+        plt.axis('off')
+        plt.savefig(f"sample-{annotation}.png")
+        plt.show()
+
 
 @hydra.main(config_path="config", config_name="default", version_base="1.2")
 def main(cfg: DictConfig):
@@ -23,8 +52,11 @@ def main(cfg: DictConfig):
 
     print(f"Device : {device}")
 
-    train_loader, test_loader = load_dataset(cfg)
-    model = get_model(cfg)
+    train_loader, test_loader, dim_input = load_dataset(cfg)
+    model = get_model(cfg, dim_input)
+
+    # sample(model, device, "before")
+    # sample(model, device, "before2")
 
     print(type(model))
     print(isinstance(model, L.LightningModule))
@@ -53,20 +85,10 @@ def main(cfg: DictConfig):
 
     model.eval()
 
-    with torch.no_grad():
-        np.random.seed(cfg["model"]["seed"])
-        z = torch.Tensor(np.zeros((1,5))).to(device) #torch.Tensor(np.random.normal(0, 1, (1, 5))).to(device)
-        sample_params = model.to(device).decoder(z)
-        mu_x, diag_x = torch.split(sample_params, 560, dim=1)
-        # x_given_z = td.MultivariateNormal(mu_x, torch.diag_embed(torch.exp(diag_x)))
-        # just take mu?
-        # sample = x_given_z.sample()
-        sample = mu_x
-        sample = sample.reshape(28, 20).cpu().numpy()
-        plt.imshow(sample, cmap='gray')
-        plt.axis('off')
-        plt.savefig("sample.png")
-        plt.show()
+    np.random.seed(cfg["model"]["seed"])
+    for i in range(5):
+        sample(model, device, f"after-{i}")
+           
 
 
 

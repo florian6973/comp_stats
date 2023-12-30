@@ -1,18 +1,20 @@
 dataset:
-  name: freyfaces
-  batch_size: 10
-  test_prop: 0.5
+  name: mnist
+  batch_size: 2048
+  train_prop: 0.9
 
 loss:
   name: elbo_unconstrained
+  output: bernouilli
+  posterior: normal
   lr: 0.0001
-  epochs: 250
-  ksi: 0.0001
+  epochs: 200
+  ksi: 0
 
 model:
   seed: 0
   h: 200
-  d: 5
+  d: 50
 
 defaults:
   - _self_

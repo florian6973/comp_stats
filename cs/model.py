@@ -6,26 +6,44 @@ from torch.nn import init
 import torch
 from torch.utils.data import Dataset, DataLoader
 import torch.distributions as td
+import numpy as np
 
 class VAE(L.LightningModule):
-    def __init__(self, config: DictConfig):
+    def __init__(self, config: DictConfig, dim_input: int):
         super().__init__()
         self.config = config
         self.d = config["model"]["d"]
         self.h = config["model"]["h"]
-        self.i = 560
+        self.i = dim_input
         self.ksi = config["loss"]["ksi"]
+        if self.config["loss"]["output"] == "bernouilli":
+            self.m = 1
+        elif self.config["loss"]["output"] == "gaussian":
+            self.m = 2
+        else:
+            raise ValueError("Unknown output")
+        
+        if self.config["loss"]["posterior"] == "normal":
+            self.latent_factor = 2
+        elif self.config["loss"]["posterior"] == "rank-1":
+            self.latent_factor = 3
+        else:
+            raise ValueError("Unknown posterior")
         # self.batch_size = config["dataset"]["batch_size"]
                 
         self.encoder = nn.Sequential(
             nn.Linear(self.i, self.h),
-            nn.Tanh(),
-            nn.Linear(self.h, 3*self.d),
+            nn.ReLU(),
+            nn.Linear(self.h, self.h),
+            nn.ReLU(),
+            nn.Linear(self.h, self.latent_factor*self.d),
         )
         self.decoder = nn.Sequential(
             nn.Linear(self.d, self.h),
-            nn.Tanh(),
-            nn.Linear(self.h, 2*self.i),
+            nn.ReLU(),
+            nn.Linear(self.h, self.h),
+            nn.ReLU(),
+            nn.Linear(self.h, self.m*self.i),
         )
 
         for layer in self.encoder + self.decoder:
@@ -53,33 +71,44 @@ class VAE(L.LightningModule):
         # print("batch.shape", batch.shape)
         latent_parameters = self.encoder(batch)
 
-        mu_z, diag_z, u_z = torch.split(latent_parameters, self.d, dim=1)
-        # print("mu_z.shape", mu_z.shape)
-        # print("diag_z.shape", diag_z.shape)
-        u_z = u_z.unsqueeze(2)
-        # print("u_z.shape", u_z.shape)
-        # print("u_z @ u_z.T.shape", (u_z @ u_z.transpose(1,2)).shape)
-        # print("torch.diag_embed(torch.exp(diag_z)).shape", torch.diag_embed(torch.exp(diag_z)).shape)
-        sigma_z = torch.diag_embed(torch.exp(diag_z)) + u_z @ u_z.transpose(1,2)
+        if self.latent_factor == 3:
+            mu_z, diag_z, u_z = torch.split(latent_parameters, self.d, dim=1)
+            # print("mu_z.shape", mu_z.shape)
+            # print("diag_z.shape", diag_z.shape)
+            u_z = u_z.unsqueeze(2)
+            # print("u_z.shape", u_z.shape)
+            # print("u_z @ u_z.T.shape", (u_z @ u_z.transpose(1,2)).shape)
+            # print("torch.diag_embed(torch.exp(diag_z)).shape", torch.diag_embed(torch.exp(diag_z)).shape)
+            sigma_z = torch.diag_embed(torch.exp(0.1 * diag_z)) + u_z @ u_z.transpose(1,2)
+        elif self.latent_factor == 2:
+            mu_z, diag_z = torch.split(latent_parameters, self.d, dim=1)
+            sigma_z = torch.diag_embed(torch.exp(0.1 * diag_z))
         # print("sigma_z.shape", sigma_z.shape)
 
         q = td.MultivariateNormal(mu_z, sigma_z)
         z = q.rsample()
         # print("z.shape", z.shape)
 
-        decoded_x = self.decoder(z)
-        # print("decoded_x.shape", decoded_x.shape)
-        mu_x, diag_x = torch.split(decoded_x, self.i, dim=1)
-        # print("mu_x.shape", mu_x.shape)
-        
         batch_size = batch.shape[0]
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         mu_prior = torch.zeros(batch_size, self.d).to(device)
         sigma_prior = torch.eye(self.d).reshape(1, self.d, self.d).repeat(batch_size, 1, 1).to(device)
         prior = td.MultivariateNormal(mu_prior, sigma_prior)
 
-        x_given_z = td.MultivariateNormal(mu_x, torch.diag_embed(torch.exp(diag_x) + self.ksi))
-        reconstruction_log_prob = x_given_z.log_prob(batch)     
+        decoded_x = self.decoder(z)
+
+        if self.config["loss"]["output"] == "bernouilli":
+            p_x = decoded_x
+            x_given_z = td.Bernoulli(logits=p_x) # or probs?
+            # batch = (batch > 255/2).float()
+            reconstruction_log_prob = x_given_z.log_prob(batch).sum(dim=1)
+        else:
+            # print("decoded_x.shape", decoded_x.shape)
+            mu_x, diag_x = torch.split(decoded_x, self.i, dim=1)
+            # print("mu_x.shape", mu_x.shape)
+            
+            x_given_z = td.MultivariateNormal(mu_x, torch.diag_embed(torch.exp(0.1 * diag_x) + self.ksi))
+            reconstruction_log_prob = x_given_z.log_prob(batch)     
         # print("Device of z", z.get_device())   
         prior_log_prob = prior.log_prob(z)
         denominator_log_prob = q.log_prob(z)
@@ -88,6 +117,12 @@ class VAE(L.LightningModule):
         # print("prior_log_prob.shape", prior_log_prob.shape)
         # print("denominator_log_prob.shape", denominator_log_prob.shape)
 
+        # print("prior_log_prob", prior_log_prob.mean())
+        # print("denominator_log_prob", denominator_log_prob.mean())
+        # print("reconstruction_log_prob", reconstruction_log_prob.mean())
+        # exit()
+
+        print(-torch.mean(reconstruction_log_prob + prior_log_prob - denominator_log_prob))
         # exit()
 
         return torch.mean(reconstruction_log_prob + prior_log_prob - denominator_log_prob)
@@ -103,30 +138,38 @@ class VAE(L.LightningModule):
         return loss
     
     def validation_step(self, batch, batch_idx):
+        # self.eval()
         # print(batch.get_device())
+
         if self.config["loss"]["name"] == "elbo_unconstrained":
-            loss = -self.elbo_unconstrained(batch)
+            with torch.no_grad():
+                loss = -self.elbo_unconstrained(batch)
         else:
             raise ValueError("Unknown loss")
+
+        # loss = torch.Tensor([0.])
         
         self.log("val_loss", loss)
         self.current_val_loss_values.append(loss)
         return loss
     
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=self.config["loss"]["lr"])
+        optimizer = optim.Adam(self.parameters(), lr=self.config["loss"]["lr"]) # no momentum unlike tensorflow?
         return optimizer
     
     def on_train_epoch_end(self):
         # for loss in self.current_train_loss_values:
         #     self.train_losses.append(loss.item())
+        # print(torch.tensor(self.current_train_loss_values))
+        print(np.mean(torch.tensor(self.current_train_loss_values)[:-1].cpu().numpy()))
+        print(np.mean(torch.tensor(self.current_val_loss_values)[:-1].cpu().numpy()))
         self.train_losses.append(torch.mean(torch.tensor(self.current_train_loss_values)).item())
         self.val_losses.append(torch.mean(torch.tensor(self.current_val_loss_values)).item())
         self.current_train_loss_values.clear()  # free memory'
         self.current_val_loss_values.clear()  # free memory'
 
-def get_model(config) -> L.LightningModule:
-    model = VAE(config)
+def get_model(config, dim_input) -> L.LightningModule:
+    model = VAE(config, dim_input)
     
     # model.eval()
     
