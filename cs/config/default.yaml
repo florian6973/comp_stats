@@ -1,11 +1,13 @@
 dataset:
   name: freyfaces
   batch_size: 10
+  test_prop: 0.5
 
 loss:
   name: elbo_unconstrained
   lr: 0.0001
-  epochs: 1000
+  epochs: 250
+  ksi: 0.0001
 
 model:
   seed: 0

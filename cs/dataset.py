@@ -10,7 +10,8 @@ def load_freyfaces(config):
     faces = matfile['ff'].T.reshape(-1, 28*20).astype(np.float32)
 
     size = faces.shape[0]
-    train_size = int(0.8 * size)
+    test_prop = config["dataset"]["test_prop"]
+    train_size = int(test_prop * size)
     test_size = size - train_size
     train_set, test_set = torch.utils.data.random_split(faces, [train_size, test_size])
 

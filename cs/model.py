@@ -14,6 +14,7 @@ class VAE(L.LightningModule):
         self.d = config["model"]["d"]
         self.h = config["model"]["h"]
         self.i = 560
+        self.ksi = config["loss"]["ksi"]
         # self.batch_size = config["dataset"]["batch_size"]
                 
         self.encoder = nn.Sequential(
@@ -77,7 +78,7 @@ class VAE(L.LightningModule):
         sigma_prior = torch.eye(self.d).reshape(1, self.d, self.d).repeat(batch_size, 1, 1).to(device)
         prior = td.MultivariateNormal(mu_prior, sigma_prior)
 
-        x_given_z = td.MultivariateNormal(mu_x, torch.diag_embed(torch.exp(diag_x)))
+        x_given_z = td.MultivariateNormal(mu_x, torch.diag_embed(torch.exp(diag_x) + self.ksi))
         reconstruction_log_prob = x_given_z.log_prob(batch)     
         # print("Device of z", z.get_device())   
         prior_log_prob = prior.log_prob(z)
