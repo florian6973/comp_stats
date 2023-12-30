@@ -1,0 +1,4 @@
+hydra
+torch
+lightning
+scipy

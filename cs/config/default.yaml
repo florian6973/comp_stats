@@ -1,0 +1,22 @@
+dataset:
+  name: freyfaces
+  batch_size: 10
+
+loss:
+  name: elbo_unconstrained
+  lr: 0.0001
+  epochs: 1000
+
+model:
+  seed: 0
+  h: 200
+  d: 5
+
+defaults:
+  - _self_
+
+hydra:
+  job:
+    chdir: true
+  run:
+    dir: ./outputs/${loss.name}_${now:%Y-%m-%d}/${now:%H-%M-%S}
