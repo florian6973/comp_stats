@@ -9,8 +9,16 @@ import torch.distributions as td
 from torchvision.datasets import MNIST
 
 repertory = r"outputs\mnist_elbo_unconstrained_bernouilli_2023-12-31\mnist_elbo_unconstrained_bernouilli_2023-12-31\13-16-50"
+# repertory = r"outputs/mnist_elbo_unconstrained_bernouilli_2023-12-31/17-38-28"
+# repertory = r"outputs/mnist_elbo_unconstrained_bernouilli_2023-12-31/17-45-52"
+repertory = r"outputs/mnist_elbo_unconstrained_bernouilli_2023-12-31/17-56-53"
 # file = r"\lightning_logs\version_0\checkpoints\epoch=199-step=35400.ckpt"
-file = r"\lightning_logs\version_0\checkpoints\epoch=1999-step=54000.ckpt"
+# file = r"\lightning_logs\version_0\checkpoints\epoch=1999-step=54000.ckpt"
+# file = r"\lightning_logs\version_0\checkpoints\epoch=49-step=1350.ckpt"
+# file = r"\lightning_logs\version_0\checkpoints\epoch=19-step=540.ckpt"
+file = r"\lightning_logs\version_0\checkpoints\epoch=4-step=135.ckpt"
+
+
 # read cpkt
 config = yaml.load(open(repertory + r"\.hydra\config.yaml", "r"), Loader=yaml.FullLoader)
 train_loader, test_loader, dim_input = D.load_dataset(config)
@@ -177,7 +185,7 @@ with torch.no_grad():
         # img_miss = data_img * mask
         # plot(log_px, img_miss)
 
-        iterations = 1000
+        iterations = 2000
         img_miss, scores = psgibbs(model, data_img, mask, iterations)
         # plot_out(img_miss, data_img)
 
@@ -206,7 +214,7 @@ with torch.no_grad():
         plt.axis('off')
         plt.title("MWG")
         plt.tight_layout()
-        plt.savefig(f"sample-prob-d-{i}.png")
+        plt.savefig(f"sample-prob-e-{i}.png")
         plt.close('all')
 
         plt.figure(figsize=(10, 10))
@@ -214,7 +222,7 @@ with torch.no_grad():
         plt.xlabel("Iteration")
         plt.ylabel("Acceptance rate")
         plt.tight_layout()
-        plt.savefig(f"acceptance-rate-d-{i}.png")
+        plt.savefig(f"acceptance-rate-e-{i}.png")
         plt.close('all')
 
     exit()

@@ -52,3 +52,6 @@ df = df.rename(
 df.sort_values(by="Score").head()
 
 np.mean(gmm_likelihood_score(grid_search.best_estimator_, data))
+
+# {'covariance_type': 'spherical', 'n_components': 100}
+# 59.567905902567645
