@@ -6,6 +6,7 @@ from torch.nn import init
 import torch
 from torch.utils.data import Dataset, DataLoader
 import torch.distributions as td
+import time
 import numpy as np
 
 class VAE(L.LightningModule):
@@ -160,6 +161,7 @@ class VAE(L.LightningModule):
             raise ValueError("Unknown loss")
         
         self.log("train_loss", loss)
+        self.last_train = time.time()
         self.current_train_loss_values.append(loss)
         return loss
     
@@ -176,6 +178,7 @@ class VAE(L.LightningModule):
         # loss = torch.Tensor([0.])
         
         self.log("val_loss", loss)
+        self.last_val = time.time()
         self.current_val_loss_values.append(loss)
         return loss
     
@@ -190,6 +193,7 @@ class VAE(L.LightningModule):
         print("")
         print(np.mean(torch.tensor(self.current_train_loss_values)[:-1].cpu().numpy()))
         print(np.mean(torch.tensor(self.current_val_loss_values)[:-1].cpu().numpy()))
+        print(self.last_train, self.last_val)
         self.train_losses.append(torch.mean(torch.tensor(self.current_train_loss_values)).item())
         self.val_losses.append(torch.mean(torch.tensor(self.current_val_loss_values)).item())
         self.current_train_loss_values.clear()  # free memory'

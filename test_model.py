@@ -7,8 +7,9 @@ import numpy as np
 import torch
 import torch.distributions as td
 
-repertory = r"outputs\elbo_unconstrained_2023-12-30\22-54-52"
-file = r"\lightning_logs\version_0\checkpoints\epoch=199-step=35400.ckpt"
+repertory = r"outputs\mnist_elbo_unconstrained_bernouilli_2023-12-31\12-01-59"
+# file = r"\lightning_logs\version_0\checkpoints\epoch=199-step=35400.ckpt"
+file = r"\lightning_logs\version_0\checkpoints\epoch=199-step=5400.ckpt"
 # read cpkt
 config = yaml.load(open(repertory + r"\.hydra\config.yaml", "r"), Loader=yaml.FullLoader)
 train_loader, test_loader, dim_input = D.load_dataset(config)

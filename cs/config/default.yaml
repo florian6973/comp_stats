@@ -1,22 +1,22 @@
 dataset:
-  name: freyfaces
-  batch_size: 10
+  name: mnist
+  batch_size: 2048
   train_prop: 0.9
 
 loss:
   name: elbo_unconstrained
-  output: gaussian
+  output: bernouilli
   posterior: normal
   lr: 0.0001
-  epochs: 200
-  ksi: 0
+  epochs: 15000
+  ksi: 0 #1000 #10 000 000
 
 model:
   seed: 0
   h: 200
-  d: 5
-  activation: tanh
-  n_layers: 1
+  d: 50
+  activation: relu
+  n_layers: 2
 
 defaults:
   - _self_
@@ -25,4 +25,4 @@ hydra:
   job:
     chdir: true
   run:
-    dir: ./outputs/${loss.name}_${now:%Y-%m-%d}/${now:%H-%M-%S}
+    dir: ./outputs/${dataset.name}_${loss.name}_${loss.output}_${now:%Y-%m-%d}/${now:%H-%M-%S}
