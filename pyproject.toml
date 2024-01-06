@@ -23,6 +23,7 @@ include = ["cs"]
 
 [project.scripts]
 csrun = "cs.main:main"
+csimput = "cs.imputation:main"
 
 [project.optional-dependencies]
 cuda = ["torch==2.1.2+cu121"]

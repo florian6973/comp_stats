@@ -1,5 +1,5 @@
 dataset:
-  name: mnist
+  name: fashion_mnist
   batch_size: 2048
   train_prop: 0.9
 

@@ -155,6 +155,7 @@ class VAE(L.LightningModule):
         return torch.mean(reconstruction_log_prob + prior_log_prob - denominator_log_prob)
     
     def training_step(self, batch, batch_idx):
+        batch = batch[0]
         if self.config["loss"]["name"] == "elbo_unconstrained":
             loss = -self.elbo_unconstrained(batch)
         else:
@@ -166,6 +167,7 @@ class VAE(L.LightningModule):
         return loss
     
     def validation_step(self, batch, batch_idx):
+        batch = batch[0]
         # self.eval()
         # print(batch.get_device())
 
