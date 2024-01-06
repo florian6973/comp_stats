@@ -3,6 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+samples/
+mnist/
+fashion_mnist/
+
 outputs/
 
 # C extensions

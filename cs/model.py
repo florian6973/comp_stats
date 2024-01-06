@@ -83,7 +83,7 @@ class VAE(L.LightningModule):
         return x
     
     # inspired from https://github.com/pamattei/MSc-DS/blob/master/Notebooks%202019/Deep%20Learning/VAE_Assignment.ipynb
-    def elbo_unconstrained(self, batch):
+    def elbo(self, batch):
         # print("batch.shape", batch.shape)
         latent_parameters = self.encoder(batch)
 
@@ -156,8 +156,8 @@ class VAE(L.LightningModule):
     
     def training_step(self, batch, batch_idx):
         batch = batch[0]
-        if self.config["loss"]["name"] == "elbo_unconstrained":
-            loss = -self.elbo_unconstrained(batch)
+        if self.config["loss"]["name"] == "elbo":
+            loss = -self.elbo(batch)
         else:
             raise ValueError("Unknown loss")
         
@@ -171,9 +171,9 @@ class VAE(L.LightningModule):
         # self.eval()
         # print(batch.get_device())
 
-        if self.config["loss"]["name"] == "elbo_unconstrained":
+        if self.config["loss"]["name"] == "elbo":
             with torch.no_grad():
-                loss = -self.elbo_unconstrained(batch)
+                loss = -self.elbo(batch)
         else:
             raise ValueError("Unknown loss")
 
@@ -182,6 +182,10 @@ class VAE(L.LightningModule):
         self.log("val_loss", loss)
         self.last_val = time.time()
         self.current_val_loss_values.append(loss)
+
+        if self.config['loss']['early_stopping'] and loss < self.config['loss']['early_stopping']:
+            self.trainer.should_stop = True
+
         return loss
     
     def configure_optimizers(self):

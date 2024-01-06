@@ -1,0 +1,29 @@
+dataset:
+  name: freyfaces
+  batch_size: 10
+  train_prop: 0.9
+
+loss:
+  name: elbo
+  output: gaussian
+  posterior: rank-1
+  lr: 0.0001
+  epochs: 2000
+  ksi: 0
+  early_stopping: # indicate the value
+
+model:
+  seed: 0
+  h: 200
+  d: 5
+  activation: tanh
+  n_layers: 1
+
+defaults:
+  - _self_
+
+hydra:
+  job:
+    chdir: true
+  run:
+    dir: ./outputs/${dataset.name}_${loss.name}_${loss.ksi}_${loss.output}_${now:%Y-%m-%d}/${now:%H-%M-%S}

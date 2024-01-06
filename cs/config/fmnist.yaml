@@ -4,12 +4,13 @@ dataset:
   train_prop: 0.9
 
 loss:
-  name: elbo_unconstrained
+  name: elbo
   output: bernouilli
   posterior: normal
   lr: 0.0001
   epochs: 200
   ksi: 0 #1000 #10 000 000
+  early_stopping:
 
 model:
   seed: 0

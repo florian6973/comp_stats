@@ -21,7 +21,7 @@ from torch.optim import Adam
 import torch
 import numpy as np
 
-matfile = sio.loadmat('./frey_rawface.mat')
+matfile = sio.loadmat('./cs/data/frey_rawface.mat')
 faces = matfile['ff'].T.reshape(-1, 28, 20)
 print(matfile.keys())
 print(matfile['ff'].shape)
@@ -37,5 +37,5 @@ import numpy as np
 imgplot = plt.imshow(faces[0,:,:], cmap='gray')
 plt.show()
 
-imgplot = plt.imshow(faces[1,:,:], cmap='gray')
+imgplot = plt.imshow(faces[100,:,:], cmap='gray')
 plt.show()

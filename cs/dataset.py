@@ -16,7 +16,7 @@ def load_freyfaces(config):
     matfile = sio.loadmat(file_folder)
     faces = matfile['ff'].T.reshape(-1, 28*20).astype(np.float32)
 
-    data = TensorDataset(faces, torch.zeros(len(faces)))
+    data = TensorDataset(torch.FloatTensor(faces), torch.zeros(len(faces)))
 
 #    gmm = GaussianMixture(n_components=10, covariance_type='diag')  
 

@@ -130,8 +130,8 @@ def psmwg(config, device, model, img, mask, n_iter):
 def main():
     argparser = argparse.ArgumentParser()
     argparser.add_argument("--repertory", type=str, required=True)
-    argparser.add_argument("--num_iter", type=int, default=2)
-    argparser.add_argument("--num_samples_per_classes", type=int, default=1)
+    argparser.add_argument("--num_iter", type=int, default=1000)
+    argparser.add_argument("--num_samples_per_classes", type=int, default=4)
     argparser.add_argument("--device", type=str, default="cuda")
     argparser.add_argument("--show", action="store_true")
 

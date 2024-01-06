@@ -83,38 +83,38 @@ def main(cfg: DictConfig):
     plt.savefig("log_likelihood.png")
     plt.show()
 
-    model.eval()
+    # model.eval()
 
-    np.random.seed(cfg["model"]["seed"])
-    # see why calling sample does not work
-    for i in range(5):
-        with torch.no_grad():
-            z = torch.Tensor(np.random.normal(0, 1, (1, model.config["model"]["d"]))).to(device) #torch.Tensor(np.random.normal(0, 1, (1, 5))).to(device)
-            print(z)
-            sample_params = model.to(device).decoder(z)
+    # np.random.seed(cfg["model"]["seed"])
+    # # see why calling sample does not work
+    # for i in range(5):
+    #     with torch.no_grad():
+    #         z = torch.Tensor(np.random.normal(0, 1, (1, model.config["model"]["d"]))).to(device) #torch.Tensor(np.random.normal(0, 1, (1, 5))).to(device)
+    #         print(z)
+    #         sample_params = model.to(device).decoder(z)
 
-            if model.config["loss"]["output"] == "bernouilli":
-                p_x = sample_params
+    #         if model.config["loss"]["output"] == "bernouilli":
+    #             p_x = sample_params
 
-                plt.imshow(np.exp(p_x.reshape(28, 28).cpu().numpy()), cmap='gray')
-                plt.axis('off')
-                plt.savefig(f"sample-prob-{i}.png")
-                plt.show()
+    #             plt.imshow(np.exp(p_x.reshape(28, 28).cpu().numpy()), cmap='gray')
+    #             plt.axis('off')
+    #             plt.savefig(f"sample-prob-{i}.png")
+    #             plt.show()
 
-                x_given_z = td.Bernoulli(logits=p_x)
-                sample = x_given_z.sample().reshape(28, 28).cpu().numpy()
-            else:
-                mu_x, diag_x = torch.split(sample_params, 560, dim=1)
-                # x_given_z = td.MultivariateNormal(mu_x, torch.diag_embed(torch.exp(diag_x)))
-                # just take mu?
-                # sample = x_given_z.sample()
-                sample = mu_x
-                sample = sample.reshape(28, 20).cpu().numpy()
+    #             x_given_z = td.Bernoulli(logits=p_x)
+    #             sample = x_given_z.sample().reshape(28, 28).cpu().numpy()
+    #         else:
+    #             mu_x, diag_x = torch.split(sample_params, 560, dim=1)
+    #             # x_given_z = td.MultivariateNormal(mu_x, torch.diag_embed(torch.exp(diag_x)))
+    #             # just take mu?
+    #             # sample = x_given_z.sample()
+    #             sample = mu_x
+    #             sample = sample.reshape(28, 20).cpu().numpy()
 
-            plt.imshow(sample, cmap='gray')
-            plt.axis('off')
-            plt.savefig(f"sample-{i}.png")
-            plt.show()
+    #         plt.imshow(sample, cmap='gray')
+    #         plt.axis('off')
+    #         plt.savefig(f"sample-{i}.png")
+    #         plt.show()
            
 
 
