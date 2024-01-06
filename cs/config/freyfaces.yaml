@@ -8,7 +8,7 @@ loss:
   output: gaussian
   posterior: rank-1
   lr: 0.0001
-  epochs: 2000
+  epochs: 130
   ksi: 0
   early_stopping: # indicate the value
 

@@ -39,6 +39,6 @@ df = df.rename(
         "mean_test_score": "Score",
     }
 )
-df.sort_values(by="Score").head()
+print(df.sort_values(by="Score").head())
 print("Validation")
-np.mean(gmm_likelihood_score(grid_search.best_estimator_, faces[train_size:]))
+print(np.mean(gmm_likelihood_score(grid_search.best_estimator_, faces[train_size:])))

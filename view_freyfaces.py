@@ -34,8 +34,14 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import numpy as np
 
-imgplot = plt.imshow(faces[0,:,:], cmap='gray')
-plt.show()
+# imgplot = plt.imshow(faces[0,:,:], cmap='gray')
+# plt.show()
 
-imgplot = plt.imshow(faces[100,:,:], cmap='gray')
+# imgplot = plt.imshow(faces[100,:,:], cmap='gray')
+# plt.show()
+
+for i in range(25):
+    plt.subplot(5, 5, i+1)
+    plt.imshow(faces[i*80,:,:], cmap='gray')
+    plt.axis('off')
 plt.show()
